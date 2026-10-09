@@ -2,9 +2,9 @@
 
 Agent skills that let a coding agent understand [EasySB](https://github.com/EasySBTeam/EasySB) and deploy it on a server for you.
 
-EasySB is a 5-in-1 sing-box deployment tool for a Linux VPS: one static Go binary (`easysb`, shortcut `sb`) that deploys and operates a five-protocol sing-box server, issues TLS certificates in process, and serves one subscription URL per account. The panel is a full-screen TUI with no non-interactive mode, so a skill cannot click through it for you.
+EasySB is a 5-in-1 sing-box deployment tool for a Linux VPS: one static Go binary (`easysb`, shortcut `sb`) that deploys and operates a five-protocol sing-box server, issues TLS certificates in process, and serves one subscription URL per account. Besides its full-screen TUI panel, EasySB has a headless `sb --provision` mode that deploys a whole host from one JSON manifest, which is what lets a skill do the deployment for you instead of handing you a list of menu paths.
 
-What a skill can do is know the tool cold, ask every question a deployment raises, run the installing half over SSH, and hand you the panel half as exact menu paths. That is this repo.
+So a skill can know the tool cold, ask every question a deployment raises, turn the answers into that manifest, install the package over SSH, and run it to completion. That is this repo.
 
 ## Install
 
@@ -55,7 +55,7 @@ Every skill is model-invoked: your agent reaches for it when your request fits, 
 
 | Skill | Job |
 | :--- | :--- |
-| [deploy-easysb](./skills/deployment/deploy-easysb/SKILL.md) | Interview you for the details a deployment needs, confirm one plan, install EasySB over SSH, then walk you through the panel steps only you can perform. |
+| [deploy-easysb](./skills/deployment/deploy-easysb/SKILL.md) | Interview you for the details a deployment needs, build the `--provision` manifest, confirm one plan, then install and provision EasySB over SSH. |
 | [understand-easysb](./skills/deployment/understand-easysb/SKILL.md) | Answer questions about what EasySB is, which protocols and ports it serves, where it stores configuration, and how its subscription service works. |
 
 ## License

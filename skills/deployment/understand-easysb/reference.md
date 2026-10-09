@@ -9,7 +9,7 @@ The source of truth for `understand-easysb`. Everything here comes from the Easy
 - sing-box is a `go.mod` requirement, compiled into the binary. The node is `easysb core run -c /etc/sing-box/config.json`. There is no separate core to download, replace, or switch.
 - Certificates are issued in process through `go-acme/lego` with the HTTP-01 standalone challenge. No `acme.sh`, no `socat`, nothing downloaded.
 - A built-in subscription service serves one URL per account, negotiated from the client's User-Agent.
-- Runtime management is the panel only. There is no web panel and no non-interactive way to create a node or an account.
+- Runtime management is the panel, or the headless `sb --provision FILE` mode that deploys a whole host from one JSON manifest. There is no web panel.
 
 ## Protocols and default ports
 
@@ -100,14 +100,19 @@ Keys: `Q` leaves the panel from any page, `Esc` goes back, `Enter` only enters o
 | `--install-renew-timer` / `--remove-renew-timer` | Manage the renewal timer |
 | `--render --width N --height N` | Render the dashboard once and exit |
 | `--serve` | Run the subscription service and accounting loop |
+| `--provision FILE` | Deploy from a JSON manifest and exit without the menu; `-` reads the manifest from stdin |
 | `--print-unit node\|sub` | Print a service unit body to stdout |
 | `--version` | Print the version and build hash |
 
 The core subcommand is `easysb core run|check|version [-c <config>]`. `core check` validates a configuration with the same engine the node uses.
 
+## Headless provisioning
+
+`sb --provision FILE` reads one JSON manifest and performs the whole deployment: it issues the certificate, writes the node store and the account store, renders the core config, writes and starts the service units, and prints each account's subscription URL. The manifest is a desired state rather than a script, so re-running it reuses the nodes it already finds and keeps each account's token and credentials: a subscription URL a client already imported does not change. Fields: `domain`, `email`, `server_ip`, `sub_port`, `nodes[]` (`protocol`, `name`, `port`, `sni`, `hop_range`) and `accounts[]` (`name`, `password`, `uuid`, `quota_gb`, `expire_days`, `nodes[]`). An omitted `nodes` list means all five protocols at their default ports. Unknown keys are rejected. The `deploy-easysb` skill builds this manifest, so call it rather than writing one by hand.
+
 ## Facts that are easy to get wrong
 
-- Management is TUI only. No flag creates a node or an account, so a human drives the panel while the agent handles everything around it.
+- A host can be deployed without the panel through `sb --provision FILE`; the panel is the interactive surface for changes after that.
 - Every protocol except Reality needs a domain that resolves to the host and a valid certificate.
 - A fresh install leaves the services stopped on purpose; configuring a node starts them.
 - Debian 12/13 and Ubuntu 24.04 only, amd64 and arm64 only.

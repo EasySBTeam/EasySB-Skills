@@ -5,13 +5,13 @@ description: Interview the user for the details a deployment needs, then install
 
 # Deploy EasySB
 
-Deployment has two halves. The agent can reach the host, install the package, and check the result. The panel is a full-screen TUI with no non-interactive mode, so the human creates the certificate, the nodes, and the accounts inside `sb`. This skill interviews the user, confirms one plan, runs the installing half, then hands off the panel half as exact menu paths.
+EasySB ships a headless deployment mode, `sb --provision`. It turns one JSON manifest of the desired state into the certificate, the nodes, the accounts, the rendered core config, and the running services, then prints each account's subscription URL. This skill interviews the user, turns the answers into that manifest, confirms one plan, installs the package, and runs the manifest over SSH. The user never has to drive the panel.
 
 ## Process
 
 ### 1. Load the facts
 
-Call the Skill tool with "understand-easysb", and read `reference.md` beside this skill. The interview and the handoff both depend on the protocol table, the default ports, and the host requirements.
+Call the Skill tool with "understand-easysb", and read `reference.md` beside this skill. The interview and the manifest both depend on the protocol table, the default ports, and the host requirements.
 
 ### 2. Interview the user
 
@@ -21,17 +21,22 @@ Ask the questions in `reference.md` under **Interview**. Ask them in the user's 
 - which protocols to enable,
 - the domain that resolves to the host (for every protocol except VLESS + Reality),
 - the ACME email,
-- the accounts to create.
+- the accounts to create,
+- the subscription port.
 
 Never guess a domain, an email, a password, a port, or a username. Ask.
 
-### 3. Confirm the plan
+### 3. Build the manifest
 
-Turn the answers into the plan table in `reference.md` under **Plan**. Show the table and the exact commands the agent will run, then get an explicit yes before touching the host. If the user picked a protocol that needs a domain and no record resolves to the host, stop and resolve that first: the panel cannot issue a certificate without it.
+Fill the template in `reference.md` under **Manifest**, one node per protocol in the plan and one entry per account, using the user's own ports, usernames, quotas and expiry dates. Name each protocol explicitly whenever the plan is not all five at their default ports.
+
+### 4. Confirm the plan
+
+Show the plan table in `reference.md` under **Plan**, the finished manifest, and the exact commands the agent will run. Get an explicit yes before touching the host. If the user picked a protocol that needs a domain and no record resolves to the host, stop and resolve that first: provisioning cannot issue a certificate without it.
 
 Run this skill's side effects only after that yes.
 
-### 4. Install
+### 5. Install
 
 Work over SSH (or locally, if the user said the agent already runs on the server):
 
@@ -49,16 +54,26 @@ curl -fsSL https://github.com/EasySBTeam/EasySB/releases/latest/download/install
 sb --version
 ```
 
-### 5. Hand off the panel
+### 6. Provision
 
-The user runs `sb` on the server and drives the TUI. Walk them through the exact menu paths in `reference.md` under **Handoff**: domain issuance, one node per protocol, one account per username, and the subscription service. Give one path at a time and wait for the user to confirm each step, so nothing scrolls away.
+Run the manifest on the server. Pipe it over SSH so no file is left behind:
 
-### 6. Verify and report
+```bash
+ssh user@host:port 'sudo sb --provision -' <<'JSON'
+<the confirmed manifest>
+JSON
+```
 
-Run the checks in `reference.md` under **Verify**: the version, both services, the config through `core check`, and the subscription URL. Report what the user must still do outside the panel, usually opening the ports in a cloud security group. Tell the user where the subscription URL is, and that the panel is the only management surface.
+The command prints one line per step and ends with the nodes it deployed and every account's `https://<domain>:<sub_port>/sub/<token>` URL. Read those URLs from the output; keep raw passwords and UUIDs out of the transcript.
+
+`--provision` is idempotent: re-running the same manifest reuses the nodes it already finds and keeps each account's token, so a subscription URL a client already imported does not change. A failed run stops before it renders a broken config, so fix the reason it printed and run it again.
+
+### 7. Verify and report
+
+Run the checks in `reference.md` under **Verify**: the version, both services, the config through `core check`, and the subscription URL. Report what the user must still do outside the panel, usually opening the ports in a cloud security group. Tell the user where the subscription URL is, and that the panel on the server remains the surface for later changes.
 
 ## Guardrails
 
 - Confirm before anything irreversible, and never run the uninstall path as part of a deployment.
-- Keep credentials out of the transcript. Read a subscription token from the panel rather than printing every account's secrets.
+- Keep credentials out of the transcript. Report subscription URLs, not raw passwords or UUIDs.
 - If a step needs a value only the human can provide, ask for it; do not invent one to keep moving.

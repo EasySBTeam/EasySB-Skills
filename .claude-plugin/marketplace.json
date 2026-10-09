@@ -9,7 +9,7 @@
     {
       "name": "easysb-skills",
       "source": "./",
-      "description": "Understand and deploy EasySB: an interview-driven deployment flow for the EasySB sing-box panel.",
+        "description": "Understand and deploy EasySB: an interview-driven flow that provisions the EasySB sing-box server from a manifest.",
       "category": "deployment",
       "keywords": [
         "easysb",

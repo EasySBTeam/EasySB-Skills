@@ -1,7 +1,7 @@
 {
   "name": "easysb-skills",
   "version": "0.1.0",
-  "description": "Agent skills to understand and deploy EasySB: an interview-driven deployment flow for the EasySB sing-box panel.",
+  "description": "Agent skills to understand and deploy EasySB: an interview-driven flow that provisions the EasySB sing-box server from a manifest.",
   "author": {
     "name": "EasySB Team",
     "url": "https://github.com/EasySBTeam"

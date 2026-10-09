@@ -1,6 +1,6 @@
 # EasySB deployment worksheet
 
-The interview, the plan template, the panel handoff, and the verification for `deploy-easysb`. Facts about EasySB itself live in `understand-easysb`.
+The interview, the manifest template, the plan table, and the verification for `deploy-easysb`. Facts about EasySB itself live in `understand-easysb`.
 
 ## Interview
 
@@ -21,17 +21,51 @@ Ask these in the user's language, numbered, each with its default. Stop at the e
 
 6. Which protocols do you want? AnyTLS, Hysteria2, TUIC v5, VLESS + Vision + Reality, VMess + WebSocket + TLS. Default: all five.
 7. Keep the default ports (8000 to 8004) or set your own? Turn Hysteria2 port hopping on, and keep the default `2080:3000` range? Default: default ports, hopping on.
+8. Which port should the subscription service listen on? Default: 8443.
 
 ### Group 4: the accounts
 
-8. Which usernames should I plan? For each one, the traffic quota, the expiry date, and which nodes they may use. Default: one account per username, no quota, no expiry, all nodes.
-9. Install the subscription service? Default: yes, since it is how clients import the account.
+9. Which usernames should I plan? For each one, the traffic quota, the expiry in days, and which nodes they may use. Default: one account per username, no quota, no expiry, all nodes.
 
 ### Group 5: the extras
 
-10. Enable BBR? Default: yes, with the `fq` queue discipline.
-11. Panel language: Chinese (`C`) or English (`E`)? Default: Chinese.
-12. Is there a cloud security group or a local firewall (ufw / firewalld) in front of the server? It decides which ports the user must open after the install.
+10. Enable BBR? Default: yes, with the `fq` queue discipline. This is a panel step afterward, not part of the manifest.
+11. Is there a cloud security group or a local firewall (ufw / firewalld) in front of the server? It decides which ports the user must open after the install.
+
+## Manifest
+
+Turn the answers into this document. Every field is optional: an omitted `nodes` list means all five protocols at their default ports; an omitted node `port` uses the protocol default; an omitted node `name` uses the protocol label.
+
+```json
+{
+  "domain": "node.example.com",
+  "email": "admin@example.com",
+  "server_ip": "203.0.113.10",
+  "sub_port": 8443,
+  "nodes": [
+    { "protocol": "anytls" },
+    { "protocol": "hysteria2", "port": 8001, "hop_range": "2080:3000" },
+    { "protocol": "tuic" },
+    { "protocol": "vless-reality" },
+    { "protocol": "vmess-ws-tls" }
+  ],
+  "accounts": [
+    { "name": "alice", "quota_gb": 100, "expire_days": 365 },
+    { "name": "bob", "nodes": ["vless-reality"] }
+  ]
+}
+```
+
+Field notes:
+
+- `domain` and `email` are required as soon as any protocol other than VLESS + Reality is in the list. Drop both for a Reality-only host.
+- `nodes[].protocol` is the key, not the label: `anytls`, `hysteria2`, `tuic`, `vless-reality`, `vmess-ws-tls`.
+- `nodes[].port` must be 1-65535, unique, and different from `sub_port`.
+- `nodes[].sni` overrides the Reality SNI (default `apple.com`); `nodes[].hop_range` overrides the Hysteria2 hop range (default `2080:3000`).
+- `accounts[].nodes` matches a node by protocol key or by node name, and defaults to every node.
+- `accounts[].quota_gb` 0 means unlimited; `accounts[].expire_days` 0 means no expiry.
+- `accounts[].password` and `accounts[].uuid` set the credential the protocol uses; leave them out to let provisioning generate one.
+- Unknown keys are rejected, so a typo fails before anything is written.
 
 ## Plan
 
@@ -44,22 +78,26 @@ Fill this in and show it before touching the host.
 | Domain | e.g. `node.example.com`, resolves: yes / no |
 | ACME email | e.g. `admin@example.com` |
 | Protocols and ports | e.g. AnyTLS 8000, Hysteria2 8001, TUIC 8002, VLESS + Reality 8003 |
-| Accounts | e.g. `alice`, all nodes, 100 GB, expires 2027-01-01 |
-| Subscription | enabled, port 8443 |
-| BBR | on, `fq` |
-| Language | Chinese |
+| Accounts | e.g. `alice`, all nodes, 100 GB, 365 days |
+| Subscription | port 8443 |
+| BBR | on, `fq` (panel step after provisioning) |
 | Ports to open | 80, each protocol port, 8443, UDP hop range |
 
-## Handoff
+## Provision
 
-The human runs `sb` on the server. Walk one path at a time and wait for confirmation before the next.
+Pipe the confirmed manifest into the mode over SSH, so nothing is written to the server but the stores themselves:
 
-1. **Domain management -> Issue.** Enter the domain and the ACME email from the plan. Wait for the DNS preflight to pass and the certificate to issue. Skip this step when the plan is Reality-only.
-2. **Node management -> Add.** One node per protocol in the plan. `Enter` takes the default port, or type the plan's port. For Reality set the SNI and keypair; for Hysteria2 set the hop range. Enable each node.
-3. **Accounts -> Create.** One account per username. Set its quota, expiry, and node selection from the plan.
-4. **Subscription -> install** the service, then pick each account and copy its `/sub/<token>` URL, QR code, or share links.
-5. **Service management -> start** and enable on boot.
-6. **BBR -> enable** with the planned queue discipline, if the plan turns it on.
+```bash
+ssh user@host:port 'sudo sb --provision -' <<'JSON'
+{
+  "domain": "node.example.com",
+  "email": "admin@example.com",
+  "accounts": [{ "name": "alice" }]
+}
+JSON
+```
+
+The run stops at the first reason it cannot continue and prints it, so a bad port, an unknown protocol, or a domain that is not yet resolvable is caught before the core is touched. On success it prints the deployed nodes and each account's `https://<domain>:<sub_port>/sub/<token>` URL.
 
 ## Verify
 
@@ -83,4 +121,12 @@ The response is a client profile. Use `http://` when no certificate is installed
 Close out by telling the user:
 
 - which ports still need opening in the cloud security group,
-- where the subscription URL is, and that the panel on the server is the only management surface.
+- where the subscription URL is, and that the panel on the server is where later changes are made.
+
+## Panel extras
+
+These are outside the manifest, so hand them to the user as menu paths only if they asked for them:
+
+1. **BBR -> enable** with the planned queue discipline.
+2. **Subscription -> service** to restart or inspect the subscription service.
+3. **System info** to set the panel language, skin or markers.
