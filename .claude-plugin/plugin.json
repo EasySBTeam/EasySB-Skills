@@ -1,0 +1,24 @@
+{
+  "name": "easysb-skills",
+  "version": "0.1.0",
+  "description": "Agent skills to understand and deploy EasySB: an interview-driven deployment flow for the EasySB sing-box panel.",
+  "author": {
+    "name": "EasySB Team",
+    "url": "https://github.com/EasySBTeam"
+  },
+  "homepage": "https://github.com/EasySBTeam/EasySB-Skills",
+  "repository": "https://github.com/EasySBTeam/EasySB-Skills",
+  "license": "GPL-3.0",
+  "keywords": [
+    "easysb",
+    "sing-box",
+    "deployment",
+    "vps",
+    "proxy",
+    "skills"
+  ],
+  "skills": [
+    "./skills/deployment/understand-easysb",
+    "./skills/deployment/deploy-easysb"
+  ]
+}

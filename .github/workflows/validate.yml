@@ -1,0 +1,30 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate skill frontmatter
+        run: |
+          fail=0
+          for f in $(find skills -name SKILL.md); do
+            if [ "$(head -n 1 "$f")" != "---" ]; then
+              echo "::error file=$f::missing frontmatter"
+              fail=1
+            fi
+            grep -q '^name:' "$f" || { echo "::error file=$f::missing name"; fail=1; }
+            grep -q '^description:' "$f" || { echo "::error file=$f::missing description"; fail=1; }
+          done
+          exit $fail
+
+      - name: Validate plugin JSON
+        run: |
+          for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json; do
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"
+          done

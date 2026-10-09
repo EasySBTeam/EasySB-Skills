@@ -1,0 +1,22 @@
+{
+  "name": "easysb",
+  "owner": {
+    "name": "EasySB Team",
+    "url": "https://github.com/EasySBTeam"
+  },
+  "description": "EasySB agent skills, as an installable Claude Code plugin.",
+  "plugins": [
+    {
+      "name": "easysb-skills",
+      "source": "./",
+      "description": "Understand and deploy EasySB: an interview-driven deployment flow for the EasySB sing-box panel.",
+      "category": "deployment",
+      "keywords": [
+        "easysb",
+        "sing-box",
+        "deployment",
+        "vps"
+      ]
+    }
+  ]
+}
